@@ -2,7 +2,7 @@ name: Academy News Scraper
 
 on:
   schedule:
-    - cron: '0 0 * * *' # بيشتغل لوحده كل يوم الساعة 12 بالليل
+   - cron: '0 */3 * * *'# بيشتغل لوحده كل يوم الساعة 12 بالليل
   workflow_dispatch: # بيخليك تقدر تشغله يدوي دلوقتي
 
 jobs:
