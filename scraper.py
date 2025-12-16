@@ -4,16 +4,16 @@ import re
 import random
 from supabase import create_client
 
-# 1. إعدادات الربط (تأكد من وجودها في GitHub Secrets)
+# 1. إعدادات الربط
 URL = os.getenv("SUPABASE_URL")
 KEY = os.getenv("SUPABASE_KEY")
 supabase = create_client(URL, KEY)
 
 def get_100_unique_images():
     """توليد قائمة بـ 100 رابط صورة تقنية فريدة لضمان عدم التكرار"""
-    # مجموعة مختارة من أفضل الصور التقنية (IDs مباشرة لضمان الاستقرار)
-    base_ids = [
-  "https://images.unsplash.com/photo-1461749280684-dccba630e2f6?w=800&q=80",
+    # القائمة الأساسية التي أرسلتها (روابط مباشرة جاهزة)
+    base_images = [
+        "https://images.unsplash.com/photo-1461749280684-dccba630e2f6?w=800&q=80",
         "https://images.unsplash.com/photo-1498050108023-c5249f4df085?w=800&q=80",
         "https://images.unsplash.com/photo-1504639725590-34d0984388bd?w=800&q=80",
         "https://images.unsplash.com/photo-1515879218367-8466d910aaa4?w=800&q=80",
@@ -54,45 +54,39 @@ def get_100_unique_images():
         "https://images.unsplash.com/photo-1537432376769-00f5c2f4c8d2?w=800&q=80",
         "https://images.unsplash.com/photo-1503437313881-503a91226402?w=800&q=80"
     ]
-    # تكملة القائمة إلى 100 باستخدام تصنيفات متنوعة مع Seed فريد
-    full_list = [f"https://images.unsplash.com/{img_id}?w=800&q=80" for img_id in base_ids]
     
+    # تكملة القائمة لـ 100 صورة (نضيف 60 صورة إضافية من تصنيفات تقنية)
     tech_topics = ["coding", "cyber", "data", "robot", "server", "tech", "software", "circuit", "web", "ai"]
-    for i in range(len(full_list), 100):
+    for i in range(len(base_images), 100):
         topic = tech_topics[i % len(tech_topics)]
-        # استخدام sig مختلف يضمن صورة مختلفة تماماً من Unsplash لكل رابط
-        full_list.append(f"https://images.unsplash.com/featured/?{topic}&sig={i+200}&w=800&q=80")
+        base_images.append(f"https://images.unsplash.com/featured/?{topic}&sig={i+500}&w=800&q=80")
     
-    random.shuffle(full_list) # خلط الصور لضمان توزيع مختلف في كل مرة
-    return full_list
+    random.shuffle(base_images) 
+    return base_images
 
 def clean_summary(text):
-    """تنظيف النص من HTML وتقليصه ليناسب واجهة التطبيق"""
     if not text: return ""
-    text = re.sub(r'<[^>]+>', '', text) # حذف وسوم HTML
+    text = re.sub(r'<[^>]+>', '', text) 
     text = text.replace("&nbsp;", " ").strip()
     return text[:250] + "..." if len(text) > 250 else text
 
 def start_scraping():
-    # المصادر الرسمية للأخبار
     sources = [
         {"url": "https://aitnews.com/category/برمجيات-وعلوم-حاسب/feed/", "cat": "برمجيات"},
         {"url": "https://www.tech-wd.com/wd/category/programming/feed/", "cat": "برمجة"},
         {"url": "https://arabhardware.net/news/feed", "cat": "أخبار التقنية"}
     ]
     
-    # تجهيز خزان الصور (Pool)
     image_pool = get_100_unique_images()
-    img_ptr = 0 # مؤشر لاختيار الصورة التالية
+    img_ptr = 0 
     
-    print("🚀 جاري سحب الأخبار وتخصيص صور فريدة لكل خبر...")
+    print("🚀 جاري سحب الأخبار وتخصيص صور فريدة...")
     
     for source in sources:
         feed = feedparser.parse(source['url'])
         author = feed.feed.title.split('-')[0].strip() if 'title' in feed.feed else "مصدر تقني"
         
         for entry in feed.entries[:12]:
-            # اختيار الصورة من الـ Pool وتحريك المؤشر لضمان عدم التكرار
             current_image = image_pool[img_ptr]
             img_ptr = (img_ptr + 1) % len(image_pool)
 
@@ -105,13 +99,12 @@ def start_scraping():
             }
             
             try:
-                # رفع البيانات أو تحديثها بناءً على العنوان
                 supabase.table("academy_news").upsert(news_data, on_conflict='title').execute()
             except Exception as e:
-                print(f"⚠️ خطأ في رفع الخبر: {e}")
+                print(f"⚠️ خطأ: {e}")
                 continue
                 
-    print(f"✅ تم التحديث بنجاح! تم استخدام {img_ptr} صورة فريدة من أصل 100.")
+    print(f"✅ تم التحديث! تم استخدام {img_ptr} صورة فريدة.")
 
 if __name__ == "__main__":
     start_scraping()
