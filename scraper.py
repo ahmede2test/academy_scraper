@@ -21,7 +21,7 @@ def scrape_and_upload():
     try:
         response = requests.get(target_url, headers=headers)
         soup = BeautifulSoup(response.content, 'html.parser')
-        articles = soup.select('article')[:5] 
+        articles = soup.select('article')[:15] 
         
         news_to_insert = []
         for art in articles:
