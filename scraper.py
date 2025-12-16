@@ -3,41 +3,44 @@ import requests
 from bs4 import BeautifulSoup
 from supabase import create_client
 
-# سحب البيانات من إعدادات GitHub Secrets (للأمان)
 URL = os.getenv("SUPABASE_URL")
 KEY = os.getenv("SUPABASE_KEY")
-
-if not URL or not KEY:
-    print("❌ خطأ: لم يتم العثور على المفاتيح في إعدادات GitHub")
-    exit(1)
-
 supabase = create_client(URL, KEY)
 
-def scrape_and_upload():
-    print("🚀 بدء سحب الأخبار...")
-    target_url = "https://www.tech-wd.com/wd/category/news/"
+def get_news_from_source(url, selector, source_name):
     headers = {'User-Agent': 'Mozilla/5.0'}
-    
+    news_list = []
     try:
-        response = requests.get(target_url, headers=headers)
+        response = requests.get(url, headers=headers)
         soup = BeautifulSoup(response.content, 'html.parser')
-        articles = soup.select('article')[:15] 
+        articles = soup.select(selector)[:15] # بنسحب 15 خبر من كل مصدر
         
-        news_to_insert = []
         for art in articles:
-            title_tag = art.select_one('h2')
-            if title_tag:
-                news_to_insert.append({
-                    "title": title_tag.text.strip(),
-                    "image_url": "https://via.placeholder.com/150", # يمكنك تحسين سحب الصور لاحقاً
-                    "content": "تم جلب هذا الخبر آلياً بواسطة نظام الأكاديمية."
+            title_tag = art.find(['h2', 'h3'])
+            link_tag = art.find('a')
+            img_tag = art.find('img')
+            
+            if title_tag and link_tag:
+                news_list.append({
+                    "title": f"[{source_name}] {title_tag.text.strip()}",
+                    "image_url": img_tag.get('src') if img_tag else "https://via.placeholder.com/150",
+                    "content": f"المصدر: {url}{link_tag['href']}"
                 })
+        return news_list
+    except:
+        return []
 
-        if news_to_insert:
-            supabase.table("academy_news").insert(news_to_insert).execute()
-            print(f"✅ تم رفع {len(news_to_insert)} خبر بنجاح.")
-    except Exception as e:
-        print(f"❌ حدث خطأ: {e}")
+def scrape_all():
+    all_news = []
+    # مصدر 1: عرب هاردوير
+    all_news += get_news_from_source("https://arabhardware.net/news", "div.post-item", "ArabHardware")
+    # مصدر 2: تك وورلد
+    all_news += get_news_from_source("https://www.tech-wd.com/wd/category/news/", "article", "TechWD")
+    
+    if all_news:
+        # بنرفع كل الأخبار مرة واحدة
+        supabase.table("academy_news").insert(all_news).execute()
+        print(f"✅ مبروك! تم إضافة {len(all_news)} خبر جديد.")
 
 if __name__ == "__main__":
-    scrape_and_upload()
+    scrape_all()
