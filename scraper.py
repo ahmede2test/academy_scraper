@@ -7,7 +7,7 @@ KEY = os.getenv("SUPABASE_KEY")
 supabase = create_client(URL, KEY)
 
 def start_scraping():
-    # مصادر متنوعة لضمان محتوى متجدد وصور مختلفة
+    # مصادر أخبار تقنية تدعم الـ RSS بشكل ممتاز
     sources = [
         "https://aitnews.com/feed/",
         "https://www.tech-wd.com/wd/feed/",
@@ -16,26 +16,25 @@ def start_scraping():
     
     for url in sources:
         feed = feedparser.parse(url)
-        for entry in feed.entries[:15]:
-            # 1. محاولة استخراج الصورة الحقيقية من المرفقات
-            image_url = "https://via.placeholder.com/600x400" # افتراضي في حال فشل كل المحاولات
+        for entry in feed.entries[:20]:
+            # 1. سحب وصف الخبر بدلاً من الرابط
+            description = entry.summary if 'summary' in entry else entry.title
+            
+            # 2. محاولة سحب صورة الخبر الأصلية
+            image_url = "https://via.placeholder.com/600x400"
             if 'media_content' in entry:
                 image_url = entry.media_content[0]['url']
             elif 'links' in entry:
                 for link in entry.links:
                     if 'image' in link.get('type', ''):
                         image_url = link.href
-            
-            # 2. تنظيف المحتوى (سحب الوصف وليس الرابط)
-            content = entry.summary if 'summary' in entry else entry.title
 
             news_data = {
                 "title": entry.title,
                 "image_url": image_url,
-                "content": content
+                "content": description # هنا سحبنا الوصف وليس اللينك
             }
             try:
-                # تحديث لو موجود أو إضافة لو جديد بناءً على العنوان
                 supabase.table("academy_news").upsert(news_data, on_conflict='title').execute()
             except:
                 continue
