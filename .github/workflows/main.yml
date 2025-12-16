@@ -2,8 +2,8 @@ name: Academy News Scraper
 
 on:
   schedule:
-   - cron: '0 */3 * * *'# بيشتغل لوحده كل يوم الساعة 12 بالليل
-  workflow_dispatch: # بيخليك تقدر تشغله يدوي دلوقتي
+    - cron: '0 */3 * * *' # بيشتغل كل 3 ساعات
+  workflow_dispatch: # للتشغيل اليدوي
 
 jobs:
   build:
@@ -24,4 +24,5 @@ jobs:
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }} # السطر الناقص اللي حل المشكلة
         run: python scraper.py
