@@ -1,5 +1,6 @@
 import os
 import feedparser
+import re
 from supabase import create_client
 
 URL = os.getenv("SUPABASE_URL")
@@ -7,37 +8,43 @@ KEY = os.getenv("SUPABASE_KEY")
 supabase = create_client(URL, KEY)
 
 def start_scraping():
-    # مصادر أخبار تقنية تدعم الـ RSS بشكل ممتاز
+    # مصادر متخصصة في البرمجة وعلوم الحاسب
     sources = [
-        "https://aitnews.com/feed/",
-        "https://www.tech-wd.com/wd/feed/",
-        "https://www.unlimit-tech.com/feed/"
+        {"url": "https://aitnews.com/category/برمجيات-وعلوم-حاسب/feed/", "cat": "برمجيات"},
+        {"url": "https://www.tech-wd.com/wd/category/programming/feed/", "cat": "برمجة"},
+        {"url": "https://www.unlimit-tech.com/category/programming/feed/", "cat": "تطوير"}
     ]
     
-    for url in sources:
-        feed = feedparser.parse(url)
-        for entry in feed.entries[:20]:
-            # 1. سحب وصف الخبر بدلاً من الرابط
-            description = entry.summary if 'summary' in entry else entry.title
-            
-            # 2. محاولة سحب صورة الخبر الأصلية
-            image_url = "https://via.placeholder.com/600x400"
+    for source in sources:
+        feed = feedparser.parse(source['url'])
+        author_name = feed.feed.title if 'title' in feed.feed else "مصدر تقني"
+        
+        for entry in feed.entries[:15]:
+            # استخراج الصورة الحقيقية
+            img_url = "https://images.unsplash.com/photo-1517694712202-14dd9538aa97?q=80&w=1000" # صورة برمجية افتراضية
             if 'media_content' in entry:
-                image_url = entry.media_content[0]['url']
-            elif 'links' in entry:
-                for link in entry.links:
-                    if 'image' in link.get('type', ''):
-                        image_url = link.href
+                img_url = entry.media_content[0]['url']
+            elif 'description' in entry:
+                match = re.search(r'<img[^>]+src="([^">]+)"', entry.description)
+                if match: img_url = match.group(1)
+
+            # تنظيف المحتوى من روابط التحويل
+            content_clean = entry.summary if 'summary' in entry else entry.title
+            content_clean = re.sub(r'<[^>]+>', '', content_clean) # مسح أي كود HTML
 
             news_data = {
                 "title": entry.title,
-                "image_url": image_url,
-                "content": description # هنا سحبنا الوصف وليس اللينك
+                "image_url": img_url,
+                "content": content_clean,
+                "author": author_name,
+                "category": source['cat']
             }
+            
             try:
                 supabase.table("academy_news").upsert(news_data, on_conflict='title').execute()
             except:
                 continue
+    print("✅ تم تحديث أخبار البرمجة بنجاح!")
 
 if __name__ == "__main__":
     start_scraping()
