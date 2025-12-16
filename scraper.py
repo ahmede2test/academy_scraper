@@ -9,10 +9,9 @@ URL = os.getenv("SUPABASE_URL")
 KEY = os.getenv("SUPABASE_KEY")
 supabase = create_client(URL, KEY)
 
-def get_100_unique_images():
-    """توليد قائمة بـ 100 رابط صورة تقنية فريدة لضمان عدم التكرار"""
-    # القائمة الأساسية التي أرسلتها (روابط مباشرة جاهزة)
-    base_images = [
+def get_fixed_images():
+    """قائمة الصور الـ 40 الثابتة التي اخترتها أنت"""
+    fixed_list = [
         "https://images.unsplash.com/photo-1461749280684-dccba630e2f6?w=800&q=80",
         "https://images.unsplash.com/photo-1498050108023-c5249f4df085?w=800&q=80",
         "https://images.unsplash.com/photo-1504639725590-34d0984388bd?w=800&q=80",
@@ -54,19 +53,13 @@ def get_100_unique_images():
         "https://images.unsplash.com/photo-1537432376769-00f5c2f4c8d2?w=800&q=80",
         "https://images.unsplash.com/photo-1503437313881-503a91226402?w=800&q=80"
     ]
-    
-    # تكملة القائمة لـ 100 صورة (نضيف 60 صورة إضافية من تصنيفات تقنية)
-    tech_topics = ["coding", "cyber", "data", "robot", "server", "tech", "software", "circuit", "web", "ai"]
-    for i in range(len(base_images), 100):
-        topic = tech_topics[i % len(tech_topics)]
-        base_images.append(f"https://images.unsplash.com/featured/?{topic}&sig={i+500}&w=800&q=80")
-    
-    random.shuffle(base_images) 
-    return base_images
+    # نقوم بعمل shuffle لضمان توزيع مختلف في كل مرة يشتغل فيها الـ Scraper
+    random.shuffle(fixed_list)
+    return fixed_list
 
 def clean_summary(text):
     if not text: return ""
-    text = re.sub(r'<[^>]+>', '', text) 
+    text = re.sub(r'<[^>]+>', '', text)
     text = text.replace("&nbsp;", " ").strip()
     return text[:250] + "..." if len(text) > 250 else text
 
@@ -77,18 +70,23 @@ def start_scraping():
         {"url": "https://arabhardware.net/news/feed", "cat": "أخبار التقنية"}
     ]
     
-    image_pool = get_100_unique_images()
-    img_ptr = 0 
+    # جلب القائمة الثابتة المخلوطة
+    image_pool = get_fixed_images()
+    img_ptr = 0
+    total_images = len(image_pool)
     
-    print("🚀 جاري سحب الأخبار وتخصيص صور فريدة...")
+    print(f"🚀 بدء السحب باستخدام {total_images} صورة ثابتة مختارة...")
     
     for source in sources:
         feed = feedparser.parse(source['url'])
         author = feed.feed.title.split('-')[0].strip() if 'title' in feed.feed else "مصدر تقني"
         
-        for entry in feed.entries[:12]:
+        # نسحب أول 10 أخبار فقط من كل مصدر لضمان عدم استهلاك الـ 40 صورة بسرعة
+        for entry in feed.entries[:10]:
+            # نأخذ الصورة التالية من القائمة
             current_image = image_pool[img_ptr]
-            img_ptr = (img_ptr + 1) % len(image_pool)
+            # نحرك المؤشر للخبر التالي (ونعود للبداية إذا انتهت الـ 40 صورة)
+            img_ptr = (img_ptr + 1) % total_images
 
             news_data = {
                 "title": entry.title,
@@ -104,7 +102,7 @@ def start_scraping():
                 print(f"⚠️ خطأ: {e}")
                 continue
                 
-    print(f"✅ تم التحديث! تم استخدام {img_ptr} صورة فريدة.")
+    print(f"✅ تم التحديث! تم استخدام {img_ptr} صورة من القائمة الثابتة.")
 
 if __name__ == "__main__":
     start_scraping()
