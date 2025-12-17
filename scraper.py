@@ -1,13 +1,18 @@
 import os
-import feedparser
 import re
 import random
-from supabase import create_client
+import feedparser
+from supabase import create_client, Client
+from pytube import Playlist
 
-# 1. إعدادات الربط - سحب القيم من GitHub Secrets
+# 1. إعدادات الربط - استبدل القيم ببياناتك أو GitHub Secrets
 URL = os.getenv("SUPABASE_URL")
 KEY = os.getenv("SUPABASE_KEY")
-supabase = create_client(URL, KEY)
+
+try:
+    supabase: Client = create_client(URL, KEY)
+except Exception as e:
+    print(f"❌ خطأ في تهيئة Supabase: {e}")
 
 # --- [قسم الأخبار: 50 صورة احترافية] ---
 
@@ -65,7 +70,6 @@ def get_50_tech_images():
         "https://images.unsplash.com/photo-1535223289827-42f1e9919769",
         "https://images.unsplash.com/photo-1504384764586-bb4cdc17457f"
     ]
-    # تهيئة الروابط مع بارامترات الجودة
     return [f"{url}?w=800&q=80&auto=format&fit=crop" for url in base_images]
 
 def start_news_scraping():
@@ -90,46 +94,53 @@ def start_news_scraping():
                 supabase.table("academy_news").upsert(news_data, on_conflict='title').execute()
             except Exception as e:
                 print(f"⚠️ فشل رفع خبر: {e}")
-    print("✅ تم تحديث الأخبار بالصور الـ 50 بنجاح.")
+    print("✅ تم تحديث الأخبار بنجاح.")
 
-# --- [قسم الدروس: سحب RSS المستقر بدون API Key] ---
+# --- [قسم اليوتيوب: سحب قائمة تشغيل كاملة آلياً] ---
 
-def sync_lessons_by_rss():
-    print("🔄 بدء سحب الدروس عبر تقنية RSS (طريقة مستقرة)...")
-    channels = [
-        {"id": "UC8butISFwT-Wl7EV0hUK0BQ", "course_id": 1, "name": "FreeCodeCamp (CS50)"},
-        {"id": "UCW5YeuERMmlnqo4ra8qBxNA", "course_id": 2, "name": "The Net Ninja (Flutter)"},
-        {"id": "UC29ju8bIPH5as8OGnQzwJyA", "course_id": 3, "name": "Traversy Media (Python)"}
-    ]
+def upload_youtube_playlist(playlist_url):
+    print(f"🔄 جاري سحب قائمة التشغيل: {playlist_url}")
+    try:
+        playlist = Playlist(playlist_url)
+        
+        # 1. إنشاء الكورس أولاً
+        course_data = {
+            "title": "كورس فلاتر الشامل - وائل أبو حمزة",
+            "thumbnail": "https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=800"
+        }
+        
+        course_response = supabase.table("courses").upsert(course_data, on_conflict='title').execute()
+        course_id = course_response.data[0]['id']
+        print(f"✅ تم تجهيز الكورس ID: {course_id}")
 
-    for channel in channels:
-        try:
-            rss_url = f"https://www.youtube.com/feeds/videos.xml?channel_id={channel['id']}"
-            feed = feedparser.parse(rss_url)
-            
-            # التأكد من وجود الكورس أولاً
-            supabase.table("courses").upsert({"id": channel['course_id'], "title": channel['name']}).execute()
-            
-            lessons = []
-            for index, entry in enumerate(feed.entries[:15]): # سحب آخر 15 فيديو
-                video_id = entry.link.split("v=")[1]
-                lessons.append({
-                    "course_id": channel['course_id'],
-                    "title": entry.title,
-                    "video_url": f"https://www.youtube.com/watch?v={video_id}",
-                    "order_index": index + 1
-                })
-            
-            if lessons:
-                supabase.table("lessons").upsert(lessons, on_conflict='video_url').execute()
-                print(f"✅ نجاح: تم رفع {len(lessons)} درس من {channel['name']}")
-                
-        except Exception as e:
-            print(f"❌ خطأ في قناة {channel['name']}: {e}")
+        # 2. تجهيز الدروس للرفع الجماعي
+        lessons_to_upload = []
+        for index, video in enumerate(playlist.videos, start=1):
+            lesson = {
+                "course_id": course_id,
+                "title": video.title,
+                "video_url": f"https://www.youtube.com/embed/{video.video_id}",
+                "order_index": index
+            }
+            lessons_to_upload.append(lesson)
+            print(f"⏳ معالجة درس: {video.title}")
+
+        # 3. رفع الدروس (Upsert لتجنب التكرار إذا كان هناك Key فريد)
+        if lessons_to_upload:
+            supabase.table("lessons").upsert(lessons_to_upload, on_conflict='video_url').execute()
+            print(f"🚀 تم رفع {len(lessons_to_upload)} درس بنجاح!")
+
+    except Exception as e:
+        print(f"❌ فشل في سحب اليوتيوب: {e}")
 
 # --- [التشغيل الرئيسي] ---
 
 if __name__ == "__main__":
-    start_news_scraping()    # تحديث الأخبار بالصور الـ 50
-    sync_lessons_by_rss()   # تحديث الدروس بدون مشاكل API
-    print("🏁 اكتملت جميع العمليات بنجاح!")
+    # تشغيل سحب الأخبار
+    start_news_scraping()
+    
+    # تشغيل سحب اليوتيوب (كورس وائل أبو حمزة)
+    target_playlist = 'https://www.youtube.com/playlist?list=PL93xoRTVf5pZ9m2pP4S7Y_Mv67G90w8fH'
+    upload_youtube_playlist(target_playlist)
+    
+    print("🏁 انتهت جميع العمليات بنجاح.")
