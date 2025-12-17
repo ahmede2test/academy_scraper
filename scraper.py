@@ -144,6 +144,9 @@ if __name__ == "__main__":
     
     # مثال: كورس Dart (Adel Nassim) - حط الـ ID الحقيقي للكورس من سوبابيز مكان رقم 1
     fetch_and_upload_playlist("PL93xoRRE8IsYfVvSnoK_V0Y8f28OEqv92", 1)
+    fetch_and_upload_playlist("PLDoPjvoNmBAzS67X-Koxv9n5V9p8nS8C1", 1) # كورس CS50
+    fetch_and_upload_playlist("PL93xoRRE8IsYfVvSnoK_V0Y8f28OEqv92", 2) # كورس Dart
+    fetch_and_upload_playlist("PLuYfI_i9-dCdt7w1vK47Y5uO7N5Yf7N8n", 3) # كورس Flutter
     
     # مثال: كورس Flutter (Tharwat Samy) - حط رقم 2 لو عندك كورس تاني
     # fetch_and_upload_playlist("PLuYfI_i9-dCdt7w1vK47Y5uO7N5Yf7N8n", 2)
