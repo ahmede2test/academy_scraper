@@ -134,19 +134,20 @@ def fetch_and_upload_playlist(playlist_id, course_id):
         print(f"❌ خطأ في سحب الكورس: {e}")
 
 # --- [التشغيل الرئيسي] ---
-
 if __name__ == "__main__":
     # 1. تحديث الأخبار أولاً
     start_news_scraping()
     
-    # 2. تحديث الكورسات البرمجية الحقيقية (أمثلة)
-    # ملاحظة: تأكد أن الـ course_id موجود في جدول courses في سوبابيز
+    # 2. تحديث الكورسات (تأكد إن IDs دي موجودة في جدول courses في سوبابيز)
     
-    # مثال: كورس Dart (Adel Nassim) - حط الـ ID الحقيقي للكورس من سوبابيز مكان رقم 1
+    # كورس رقم 1: Dart (Adel Nassim)
     fetch_and_upload_playlist("PL93xoRRE8IsYfVvSnoK_V0Y8f28OEqv92", 1)
-    fetch_and_upload_playlist("PLDoPjvoNmBAzS67X-Koxv9n5V9p8nS8C1", 1) # كورس CS50
-    fetch_and_upload_playlist("PL93xoRRE8IsYfVvSnoK_V0Y8f28OEqv92", 2) # كورس Dart
-    fetch_and_upload_playlist("PLuYfI_i9-dCdt7w1vK47Y5uO7N5Yf7N8n", 3) # كورس Flutter
+    
+    # كورس رقم 2: Flutter (Tharwat Samy)
+    fetch_and_upload_playlist("PLuYfI_i9-dCdt7w1vK47Y5uO7N5Yf7N8n", 2)
+    
+    # كورس رقم 3: CS50 بالعربي
+    fetch_and_upload_playlist("PLDoPjvoNmBAzS67X-Koxv9n5V9p8nS8C1", 3)
     
     # مثال: كورس Flutter (Tharwat Samy) - حط رقم 2 لو عندك كورس تاني
     # fetch_and_upload_playlist("PLuYfI_i9-dCdt7w1vK47Y5uO7N5Yf7N8n", 2)
