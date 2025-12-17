@@ -1,4 +1,4 @@
-name: Academy News Scraper
+name: Academy News & Courses Scraper
 
 on:
   schedule:
@@ -24,5 +24,6 @@ jobs:
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }} # السطر الناقص اللي حل المشكلة
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }} # السطر ده ضروري عشان يوتيوب يشتغل
         run: python scraper.py
