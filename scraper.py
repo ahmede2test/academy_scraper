@@ -1,16 +1,23 @@
-import os
+ import os
 import feedparser
 import re
 import random
 from supabase import create_client
+from googleapiclient.discovery import build # مكتبة يوتيوب
 
-# 1. إعدادات الربط
+# 1. إعدادات الربط (تأكد من إضافة YOUTUBE_API_KEY في GitHub Secrets)
 URL = os.getenv("SUPABASE_URL")
 KEY = os.getenv("SUPABASE_KEY")
+YOUTUBE_API_KEY = os.getenv("YOUTUBE_API_KEY")
+
 supabase = create_client(URL, KEY)
+# بناء عميل يوتيوب
+youtube = build('youtube', 'v3', developerKey=YOUTUBE_API_KEY)
+
+# --- [جزء الأخبار - كودك الأصلي] ---
 
 def get_fixed_images():
-    """قائمة الصور الـ 40 الثابتة التي اخترتها أنت"""
+    """قائمة الصور الـ 40 الثابتة"""
     fixed_list = [
         "https://images.unsplash.com/photo-1461749280684-dccba630e2f6?w=800&q=80",
         "https://images.unsplash.com/photo-1498050108023-c5249f4df085?w=800&q=80",
@@ -53,7 +60,6 @@ def get_fixed_images():
         "https://images.unsplash.com/photo-1537432376769-00f5c2f4c8d2?w=800&q=80",
         "https://images.unsplash.com/photo-1503437313881-503a91226402?w=800&q=80"
     ]
-    # نقوم بعمل shuffle لضمان توزيع مختلف في كل مرة يشتغل فيها الـ Scraper
     random.shuffle(fixed_list)
     return fixed_list
 
@@ -63,29 +69,25 @@ def clean_summary(text):
     text = text.replace("&nbsp;", " ").strip()
     return text[:250] + "..." if len(text) > 250 else text
 
-def start_scraping():
+def start_news_scraping():
     sources = [
         {"url": "https://aitnews.com/category/برمجيات-وعلوم-حاسب/feed/", "cat": "برمجيات"},
         {"url": "https://www.tech-wd.com/wd/category/programming/feed/", "cat": "برمجة"},
         {"url": "https://arabhardware.net/news/feed", "cat": "أخبار التقنية"}
     ]
     
-    # جلب القائمة الثابتة المخلوطة
     image_pool = get_fixed_images()
     img_ptr = 0
     total_images = len(image_pool)
     
-    print(f"🚀 بدء السحب باستخدام {total_images} صورة ثابتة مختارة...")
+    print(f"🚀 بدء سحب الأخبار...")
     
     for source in sources:
         feed = feedparser.parse(source['url'])
         author = feed.feed.title.split('-')[0].strip() if 'title' in feed.feed else "مصدر تقني"
         
-        # نسحب أول 10 أخبار فقط من كل مصدر لضمان عدم استهلاك الـ 40 صورة بسرعة
         for entry in feed.entries[:10]:
-            # نأخذ الصورة التالية من القائمة
             current_image = image_pool[img_ptr]
-            # نحرك المؤشر للخبر التالي (ونعود للبداية إذا انتهت الـ 40 صورة)
             img_ptr = (img_ptr + 1) % total_images
 
             news_data = {
@@ -99,10 +101,49 @@ def start_scraping():
             try:
                 supabase.table("academy_news").upsert(news_data, on_conflict='title').execute()
             except Exception as e:
-                print(f"⚠️ خطأ: {e}")
+                print(f"⚠️ خطأ في الأخبار: {e}")
                 continue
-                
-    print(f"✅ تم التحديث! تم استخدام {img_ptr} صورة من القائمة الثابتة.")
+    print("✅ تم تحديث الأخبار بنجاح.")
+
+# --- [جزء الكورسات - الإضافة الجديدة] ---
+
+def fetch_and_upload_playlist(playlist_id, course_id):
+    """يسحب دروس من يوتيوب ويرفعها لجدول lessons"""
+    print(f"📺 جاري سحب دروس الكورس رقم: {course_id} من يوتيوب...")
+    try:
+        request = youtube.playlistItems().list(
+            part='snippet',
+            playlistId=playlist_id,
+            maxResults=50
+        )
+        response = request.execute()
+        
+        lessons = []
+        for item in response['items']:
+            lessons.append({
+                "course_id": course_id,
+                "title": item['snippet']['title'],
+                "video_url": f"https://www.youtube.com/watch?v={item['snippet']['resourceId']['videoId']}",
+                "order_index": item['snippet']['position'] + 1
+            })
+        
+        # رفع البيانات (استخدمنا upsert عشان لو الدروس موجودة يحدثها بدل ما يكررها)
+        supabase.table("lessons").upsert(lessons, on_conflict='video_url').execute()
+        print(f"✅ تم رفع {len(lessons)} درس بنجاح للكورس {course_id}.")
+    except Exception as e:
+        print(f"❌ خطأ في سحب الكورس: {e}")
+
+# --- [التشغيل الرئيسي] ---
 
 if __name__ == "__main__":
-    start_scraping()
+    # 1. تحديث الأخبار أولاً
+    start_news_scraping()
+    
+    # 2. تحديث الكورسات البرمجية الحقيقية (أمثلة)
+    # ملاحظة: تأكد أن الـ course_id موجود في جدول courses في سوبابيز
+    
+    # مثال: كورس Dart (Adel Nassim) - حط الـ ID الحقيقي للكورس من سوبابيز مكان رقم 1
+    fetch_and_upload_playlist("PL93xoRRE8IsYfVvSnoK_V0Y8f28OEqv92", 1)
+    
+    # مثال: كورس Flutter (Tharwat Samy) - حط رقم 2 لو عندك كورس تاني
+    # fetch_and_upload_playlist("PLuYfI_i9-dCdt7w1vK47Y5uO7N5Yf7N8n", 2)
