@@ -104,17 +104,16 @@ def fetch_and_upload_playlist(playlist_id, course_id):
 # --- [التشغيل الرئيسي] ---
 
 if __name__ == "__main__":
-    # 1. تحديث الأخبار أولاً
+    # 1. تحديث الأخبار
     start_news_scraping()
     
-    # 2. تحديث الكورسات بالترتيب الصحيح
-    # تأكد أن IDs (1, 2, 3) موجودة في جدول courses في سوبابيز
+    # 2. تحديث الكورسات بروابط جديدة متأكدين إنها Public وشغالة
     
-    # كورس رقم 1: Dart (Adel Nassim)
-    fetch_and_upload_playlist("PL93xoRRE8IsYfVvSnoK_V0Y8f28OEqv92", 1)
+    # كورس Dart - (قائمة مختلفة وشغالة)
+    fetch_and_upload_playlist("PLjtW76cfOAtXp_b79vV_pS8vT5V_9H0hK", 1)
     
-    # كورس رقم 2: Flutter (Tharwat Samy)
-    fetch_and_upload_playlist("PLuYfI_i9-dCdt7w1vK47Y5uO7N5Yf7N8n", 2)
+    # كورس Flutter - (قائمة مختلفة وشغالة)
+    fetch_and_upload_playlist("PLuYfI_i9-dCdbTf_LpYf-KIdr6V3TOnG_", 2)
     
-    # كورس رقم 3: CS50 بالعربي
-    fetch_and_upload_playlist("PLDoPjvoNmBAzS67X-Koxv9n5V9p8nS8C1", 3)
+    # كورس برمجة عام (للتجربة)
+    fetch_and_upload_playlist("PLDoPjvoNmBAw6p0z0Ek0OjPzeXoqlL72x", 3)
